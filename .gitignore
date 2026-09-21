@@ -1,0 +1,17 @@
+# Dipendenze
+node_modules/
+dist/
+build/
+
+# File di ambiente e log
+.env
+.env.*
+*.log
+
+# Cartelle di sistema o IDE
+.vscode/
+.idea/
+.DS_Store
+
+# File temporanei di build
+coverage/

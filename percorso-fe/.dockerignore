@@ -1,0 +1,15 @@
+# percorso-fe/.dockerignore
+node_modules
+.git
+.gitignore
+.env
+.env.*
+dist
+.dockerignore
+Dockerfile
+docker-compose*.yml
+README.md
+.vscode
+.idea
+coverage
+*.log

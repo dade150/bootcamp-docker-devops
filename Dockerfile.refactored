@@ -1,0 +1,28 @@
+# Dockerfile.refactored
+FROM node:20.11.1-alpine3.19 AS builder
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+FROM node:20.11.1-alpine3.19 AS runtime
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=builder /app/package*.json ./
+RUN npm ci --omit=dev
+COPY --from=builder /app/dist ./dist
+
+USER node
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget -q --spider http://localhost:3000/healthz || exit 1
+
+EXPOSE 3000
+
+CMD ["node", "dist/index.js"]

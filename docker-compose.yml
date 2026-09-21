@@ -1,0 +1,64 @@
+# docker-compose.yml (BE)
+services:
+  frontend:
+    build: ./percorso-fe
+    image: lipari-fe:dev
+    ports:
+      - "8080:80"
+    depends_on:
+      - mock-api
+    networks:
+      - app-net
+
+  mock-api:
+    image: clue/json-server
+    command: --watch /data/db.json --host 0.0.0.0 --port 80
+    volumes:
+      - ./percorso-fe/mocks/db.json:/data/db.json:ro
+    networks:
+      - app-net
+
+  api:
+    build: ./percorso-be
+    image: lipari-be:dev
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://user:pass@db:5432/lipari
+      REDIS_URL: redis://cache:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_started
+    networks:
+      - app-net
+
+  db:
+    image: postgres:16.2-alpine
+    environment:
+      POSTGRES_DB: lipari
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./percorso-be/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d lipari"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-net
+
+  cache:
+    image: redis:7.2-alpine
+    networks:
+      - app-net
+
+volumes:
+  postgres_data:
+
+networks:
+  app-net:
