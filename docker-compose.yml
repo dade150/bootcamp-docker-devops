@@ -11,8 +11,12 @@ services:
       - app-net
 
   mock-api:
-    image: clue/json-server
-    command: --watch /data/db.json --host 0.0.0.0
+    image: node:20-alpine
+    working_dir: /app
+    command: npx json-server --watch /data/db.json --port 80 --host 0.0.0.0
+    restart: unless-stopped
+    ports:
+      - "3001:80"
     volumes:
       - ./percorso-fe/mocks/db.json:/data/db.json:ro
     networks:

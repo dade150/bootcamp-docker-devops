@@ -1,5 +1,3 @@
-# percorso-be/Dockerfile
-# Stage 1: build
 FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
@@ -7,8 +5,7 @@ RUN --mount=type=cache,target=/root/.npm \
     npm ci
 COPY . .
 
-# Stage 2: runtime
-FROM node:20.11.1-alpine3.19 AS runtime
+FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
