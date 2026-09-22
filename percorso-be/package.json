@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "build": "mkdir -p dist && cp -r src/* dist/",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest --forceExit"
   },
   "keywords": [],
   "author": "",
@@ -16,5 +16,9 @@
     "express": "^5.2.1",
     "ioredis": "^6.0.0",
     "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "jest": "^30.5.2",
+    "supertest": "^7.2.2"
   }
 }

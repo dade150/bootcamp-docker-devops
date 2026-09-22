@@ -3,34 +3,44 @@ const express = require('express');
 const { Pool } = require('pg');
 const Redis = require('ioredis');
 
-const app = express();
-const port = process.env.PORT || 3000;
+function createApp(pool, redis) {
+  const app = express();
+  app.use(express.json());
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const redis = new Redis(process.env.REDIS_URL);
+  app.get('/healthz', async (req, res) => {
+    try {
+      await pool.query('SELECT 1');
+      await redis.ping();
+      res.json({ status: 'ok', deps: ['db', 'cache'] });
+    } catch (err) {
+      res.status(503).json({ status: 'degraded', error: err.message });
+    }
+  });
 
-app.use(express.json());
+  app.get('/accounts', async (req, res) => {
+    const cached = await redis.get('accounts:all');
+    if (cached) return res.json(JSON.parse(cached));
 
-app.get('/healthz', async (req, res) => {
-  try {
-    await pool.query('SELECT 1');
-    await redis.ping();
-    res.json({ status: 'ok', deps: ['db', 'cache'] });
-  } catch (err) {
-    res.status(503).json({ status: 'degraded', error: err.message });
-  }
-});
+    const { rows } = await pool.query('SELECT id, iban, balance FROM accounts');
+    await redis.setex('accounts:all', 30, JSON.stringify(rows));
+    res.json(rows);
+  });
 
-app.get('/accounts', async (req, res) => {
-  const cached = await redis.get('accounts:all');
-  if (cached) return res.json(JSON.parse(cached));
+  return app;
+}
 
-  const { rows } = await pool.query('SELECT id, iban, balance FROM accounts');
-  await redis.setex('accounts:all', 30, JSON.stringify(rows));
-  res.json(rows);
-});
+function createPool() {
+  return new Pool({ connectionString: process.env.DATABASE_URL });
+}
+
+function createRedis() {
+  return new Redis(process.env.REDIS_URL);
+}
 
 let server;
+let pool;
+let redis;
+
 function shutdown(signal) {
   console.log(`Received ${signal}, shutting down...`);
   server.close(async () => {
@@ -44,6 +54,14 @@ function shutdown(signal) {
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 
-server = app.listen(port, () => {
-  console.log(`API listening on port ${port}`);
-});
+if (require.main === module) {
+  const port = process.env.PORT || 3000;
+  pool = createPool();
+  redis = createRedis();
+  const app = createApp(pool, redis);
+  server = app.listen(port, () => {
+    console.log(`API listening on port ${port}`);
+  });
+}
+
+module.exports = { createApp, createPool, createRedis };
